@@ -44,6 +44,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: your-project-name        # 替换为你的 Pages 项目名
-          directory: ./dist                     # 你的构建输出目录（如 dist, build, public）
+          projectName: iptv        # 替换为你的 Pages 项目名
+          directory: ./m3u                     # 你的构建输出目录（如 dist, build, public）
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
