@@ -28,23 +28,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build sources
+      - name: Build sources and remove oversized EPG
         run: |
           mkdir -p m3u
           pnpm build
-
-      - name: Remove oversized EPG file
-        run: |
-          # 删除构建输出目录 m3u 下的 epg_pw.xml
+          # 删除所有可能位置的 epg_pw.xml（包括 public 和 m3u 目录）
+          rm -f public/epg/epg_pw.xml
           rm -f m3u/epg/epg_pw.xml
-          # 同时删除根目录下可能存在的 epg_pw.xml
           find . -name "epg_pw.xml" -type f -delete
+          # 验证是否删除成功
+          if find . -name "epg_pw.xml" -type f | grep -q .; then
+            echo "Error: epg_pw.xml still exists"
+            exit 1
+          else
+            echo "Success: epg_pw.xml removed"
+          fi
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: iptv        # 🔁 替换成你的 Pages 项目名
-          directory: ./m3u                      # 🔁 改为 m3u（你的实际输出目录）
+          projectName: iptv        # 替换为你的 Pages 项目名
+          directory: ./m3u                      # 你的构建输出目录
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
