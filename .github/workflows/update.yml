@@ -33,16 +33,18 @@ jobs:
           mkdir -p m3u
           pnpm build
 
-      - name: Compress EPG file
+      - name: Remove oversized EPG file (exceeds 25 MiB limit)
         run: |
-          # 找到 epg_pw.xml 文件并压缩（压缩后约 3-4 MB，远小于 25 MB 限制）
-          find . -name "epg_pw.xml" -type f -exec gzip -9 {} \;
+          # 删除部署目录下的 epg_pw.xml
+          rm -f dist/epg/epg_pw.xml
+          # 同时删除其他可能位置的同名文件
+          find . -name "epg_pw.xml" -type f -delete
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: iptv     # 🔁 替换成你的 Cloudflare Pages 项目名
-          directory: ./m3u                  # 🔁 替换成你的构建输出目录
+          projectName: iptv        # 🔁 替换成你的 Pages 项目名
+          directory: ./m3u                     # 🔁 替换成你的构建输出目录
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
