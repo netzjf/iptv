@@ -2,11 +2,13 @@ name: Auto Update IPTV Sources
 
 on:
   schedule:
-    - cron: '0 12 * * *'   # 每天12:00 UTC 运行，可按需修改
-  workflow_dispatch:       # 允许手动触发
+    - cron: '0 12 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
+    permissions:
+      deployments: write          # 🔑 关键：允许创建 deployment
     runs-on: ubuntu-latest
 
     steps:
@@ -27,23 +29,16 @@ jobs:
         run: pnpm install
 
       - name: Build sources
-        run: |
-          # 你的构建命令，例如 pnpm build 或 python generate.py
-          pnpm build
-          # 假设构建后 epg/epg_pw.xml 生成在某个目录（如 dist/ 或根目录）
+        run: pnpm build
 
       - name: Remove oversized EPG file (exceeds 26.2 MB limit)
-        run: |
-          # 删除所有名为 epg_pw.xml 且大于 25MB 的文件（确保部署不失败）
-          find . -name "epg_pw.xml" -type f -size +25M -delete
-          # 如果明确知道路径，也可以直接删除：
-          # rm -f dist/epg/epg_pw.xml   # 根据实际目录调整
+        run: find . -name "epg_pw.xml" -type f -size +25M -delete
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: iptv        # 替换为你的 Pages 项目名
-          directory: ./m3u                     # 你的构建输出目录（如 dist, build, public）
+          projectName: iptv     # 🔁 替换成你的 Pages 项目名
+          directory: ./m3u                  # 🔁 替换成你的输出目录
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
