@@ -33,74 +33,16 @@ jobs:
           mkdir -p m3u
           pnpm build
 
-      - name: Prune and compress EPG file
+      - name: Compress EPG file
         run: |
-          # 查找生成的 epg_pw.xml 文件
-          EPG_FILE=$(find . -name "epg_pw.xml" -type f | head -n 1)
-          if [ -f "$EPG_FILE" ]; then
-            echo "Found EPG file: $EPG_FILE"
-            
-            # 1. 精简：只保留最近3天的节目（删除旧节目）
-            # 使用 Python 一行命令处理（如果没有 Python，可以跳过精简只压缩）
-            python3 -c "
-import xml.etree.ElementTree as ET
-import datetime
-import sys
-file_path = '$EPG_FILE'
-try:
-    tree = ET.parse(file_path)
-    root = tree.getroot()
-    now = datetime.datetime.now()
-    start_limit = now - datetime.timedelta(days=1)
-    end_limit = now + datetime.timedelta(days=2)
-    for programme in list(root.findall('programme')):
-        start_str = programme.get('start', '')
-        if start_str:
-            try:
-                start_dt = datetime.datetime.strptime(start_str[:14], '%Y%m%d%H%M%S')
-                if start_dt < start_limit or start_dt > end_limit:
-                    root.remove(programme)
-            except:
-                pass
-    # 移除 <desc> 标签
-    for programme in root.findall('programme'):
-        for desc in programme.findall('desc'):
-            programme.remove(desc)
-    tree.write(file_path, encoding='utf-8', xml_declaration=True)
-    print('EPG file pruned successfully')
-except Exception as e:
-    print(f'Pruning failed: {e}')
-"
-            # 2. 压缩
-            gzip -9 -c "$EPG_FILE" > "${EPG_FILE}.gz"
-            # 3. 删除原文件
-            rm "$EPG_FILE"
-            echo "Compressed EPG file created: ${EPG_FILE}.gz"
-          else
-            echo "No epg_pw.xml found, skip"
-          fi
-
-      - name: Add _headers for gzip
-        run: |
-          # 找到部署目录（通常是 dist 或 build）
-          DEPLOY_DIR="dist"
-          if [ ! -d "$DEPLOY_DIR" ]; then
-            DEPLOY_DIR="build"
-          fi
-          if [ -d "$DEPLOY_DIR" ]; then
-            echo "/epg/epg_pw.xml.gz" >> "$DEPLOY_DIR/_headers"
-            echo "  Content-Encoding: gzip" >> "$DEPLOY_DIR/_headers"
-            echo "  Content-Type: application/xml" >> "$DEPLOY_DIR/_headers"
-            echo "Headers added"
-          else
-            echo "Deploy directory not found, headers not added"
-          fi
+          # 找到 epg_pw.xml 文件并压缩（压缩后约 3-4 MB，远小于 25 MB 限制）
+          find . -name "epg_pw.xml" -type f -exec gzip -9 {} \;
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: iptv   # 修改为你的 Pages 项目名
-          directory: ./m3u                # 修改为你的输出目录
+          projectName: iptv     # 🔁 替换成你的 Cloudflare Pages 项目名
+          directory: ./m3u                  # 🔁 替换成你的构建输出目录
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
