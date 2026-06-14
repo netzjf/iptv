@@ -2,13 +2,13 @@ name: Auto Update IPTV Sources
 
 on:
   schedule:
-    - cron: '0 12 * * *'   # 每天12:00 UTC
-  workflow_dispatch:        # 允许手动触发
+    - cron: '0 12 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
     permissions:
-      deployments: write     # 🔑 必须添加，允许 GitHub Token 创建 deployment
+      deployments: write
     runs-on: ubuntu-latest
 
     steps:
@@ -29,7 +29,12 @@ jobs:
         run: pnpm install
 
       - name: Build sources
-        run: pnpm build
+        run: |
+          # 创建缺失的目录
+          mkdir -p m3u
+          # 如果还有 epg 目录也需要，可以取消下一行注释
+          # mkdir -p epg
+          pnpm build
 
       - name: Remove oversized EPG file (exceeds 26.2 MB limit)
         run: find . -name "epg_pw.xml" -type f -size +25M -delete
@@ -39,6 +44,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: iptv      # 替换为你的 Pages 项目名
-          directory: ./m3u               # 替换为你的输出目录
+          projectName: iptv
+          directory: ./m3u
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
